@@ -40,6 +40,16 @@ class CatalogStore:
             raw.close()
 
     def _ensure_table(self) -> None:
+        # The FTS catalog is SQLite-only (FTS5 virtual tables don't exist on other
+        # engines). Fail fast with an actionable message instead of a cryptic
+        # dialect error if DATABASE_URL points somewhere else (e.g. PostgreSQL).
+        if engine.dialect.name != "sqlite":
+            raise RuntimeError(
+                f"The narrative catalog requires SQLite, but DATABASE_URL resolves to "
+                f"'{engine.dialect.name}' ({engine.url}). This branch is SQLite-only. "
+                f"Set DATABASE_URL=sqlite:///./investigator_ai.db (and unset any "
+                f"DATABASE_URL exported in your shell), then restart."
+            )
         # page/chunk_index/file_hash/doc_type stored but not full-text indexed;
         # content/source/session_id are searchable + usable as filters.
         self._run(
