@@ -22,6 +22,7 @@ follow-up questions.
 
 ## 📑 Table of Contents
 
+- [Branches](#-branches)
 - [Overview](#-overview)
 - [Key Features](#-key-features)
 - [Example Conversation](#-example-conversation)
@@ -36,6 +37,31 @@ follow-up questions.
 - [Documentation](#-documentation)
 - [Troubleshooting](#-troubleshooting)
 - [License](#-license)
+
+---
+
+## 🌿 Branches
+
+This repository ships **two parallel implementations** of the same application — same
+features and API, different data layer. Pick the one that matches how you want to run it.
+
+| Branch | Data layer | Narrative retrieval | DB server? | `DATABASE_URL` |
+|--------|-----------|---------------------|------------|----------------|
+| **`main`** | PostgreSQL (structured tables) | ChromaDB vector search + `sentence-transformers` embeddings | **Yes** — PostgreSQL on `localhost:5432` | `postgresql://user:pw@localhost:5432/investigator_ai` |
+| **`sqlite-migration`** | **SQLite** — structured tables **+ FTS5 catalog** in one local `.db`; JSON store for versioned envelopes | SQLite **FTS5** full-text search (bm25) — no vector store, no embeddings | **No** | `sqlite:///./investigator_ai.db` |
+
+- **`main`** — the original build. Structured/aggregate questions run as SQL over
+  **PostgreSQL**; narrative questions use **semantic** (vector) retrieval over **ChromaDB**.
+  Requires a running Postgres server and downloads a local embedding model.
+- **`sqlite-migration`** — a server-free rebuild. The aggregate engine runs on
+  **SQLite** and "catalog lookup" is **SQLite FTS5** keyword search. No Postgres, no
+  ChromaDB, no embedding model — the whole catalog is one `.db` file plus a JSON store.
+  Lighter to set up; narrative retrieval is keyword-based rather than semantic.
+
+> ⚠️ **The branches are not interchangeable at runtime** — each expects its own
+> `DATABASE_URL`. Running the `sqlite-migration` code against a PostgreSQL URL (or the
+> `main` code against SQLite) will fail. Make sure the checked-out branch matches the
+> `DATABASE_URL` in your environment (a shell-exported `DATABASE_URL` overrides `.env`).
 
 ---
 
