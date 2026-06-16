@@ -4,17 +4,28 @@ SQLAlchemy database connection, engine, and session factory.
 from contextlib import contextmanager
 from typing import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 from loguru import logger
 
 from src.config.settings import settings
 
 if settings.database_url.startswith("sqlite"):
+    # check_same_thread=False so the FastAPI threadpool can share the connection.
     engine = create_engine(
         settings.database_url,
+        connect_args={"check_same_thread": False},
         echo=False,
     )
+
+    @event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _record):
+        # WAL allows concurrent readers alongside one writer; busy_timeout makes a
+        # contended write wait instead of immediately raising "database is locked".
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA journal_mode=WAL")
+        cur.execute("PRAGMA busy_timeout=5000")
+        cur.close()
 else:
     engine = create_engine(
         settings.database_url,
